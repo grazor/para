@@ -4,6 +4,7 @@
 index.md
 
 !.bin/
+!.bin/*
 
 
 
