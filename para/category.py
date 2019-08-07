@@ -4,12 +4,13 @@ import re
 import string
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, TypeVar
+from typing import Iterable, Optional, TypeVar
 
 from para.render import render_template
 
 T = TypeVar("Category")
 
+DEFAULT_ROOT_NAME = 'Para'
 
 DATE_FORMAT = "%d.%m.%Y"
 SPECIAL_CHARS = set(string.punctuation + string.digits + string.whitespace)
@@ -18,8 +19,6 @@ DESCRIPTION_FORBIDDEN_FIRST_CHARS = SPECIAL_CHARS - set("[]()")
 ALLOWED_EXTENSIONS = [".html", ".pdf", ".csv", ".txt"]
 
 REGEX_CHECKBOX = re.compile(r"\[[xX_\s]?\]")
-
-logging.basicConfig(level=logging.DEBUG)
 
 
 @dataclass
@@ -176,8 +175,8 @@ class Category:
                 category.index.unlink()
 
     @classmethod
-    def scan(cls, path, name='Para') -> None:
-        root = cls(path=path, level=0, name=name)
+    def scan(cls, path, name: Optional[str] = None) -> None:
+        root = cls(path=path, level=0, name=name or DEFAULT_ROOT_NAME)
         root.read()
         categories = [root]
 
