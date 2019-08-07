@@ -22,8 +22,12 @@
 
 {% for child in category.subcategories -%}{{ render_category(child, root) }}
 {% endfor %}
+
+{% for entry in category.entries %}{{ render_entry(entry, category.parent) }}
+{% endfor %}
 {% endif -%}{% endfor %}
-{% if root.level > 0 -%}
+{% if root.level >= 0 -%}
 {% for entry in root.entries %}{{ render_entry(entry) }}
 {% endfor %}
 {% endif -%}
+
