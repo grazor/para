@@ -27,6 +27,7 @@ def monitor(path: Path, name=None) -> None:
     event_handler = ParaEventHandler(path, name)
     observer.schedule(event_handler, path.as_posix(), recursive=True)
     observer.start()
+    logging.info('Started para monitor')
     try:
         while True:
             time.sleep(1)
