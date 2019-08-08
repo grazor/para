@@ -1,10 +1,12 @@
 import argparse
 import logging
 import os
-import daemon
+import time
 from pathlib import Path
 
-from para import Category, monitor
+import daemon
+
+from para import Category, monitor, run_command
 
 logging.basicConfig(level=logging.INFO)
 
@@ -28,6 +30,24 @@ run_parser.add_argument('--preview-command', type=str, default=None, help='A com
 run_parser.add_argument('--daemonize', '-d', action='store_true', help='Run in the background')
 run_parser.add_argument('path', type=lambda p: Path(p), nargs='?', default=os.getcwd(), help='Path of kdb root')
 
+
+def run_monitor(args):
+    active = []
+    active.append(monitor(path=args.path, name=args.title))
+    if args.sync_command:
+        active.append(run_command(args.sync_command))
+    if args.preview_command:
+        active.append(run_command(args.preview_command))
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        (thread.stop() for thread in active if thread.is_alive())
+
+    (thread.join() for thread in active)
+
+
 if __name__ == "__main__":
     args = parser.parse_args()
 
@@ -42,6 +62,6 @@ if __name__ == "__main__":
     if args.command == 'run':
         if args.daemonize:
             with daemon.DaemonContext():
-                monitor(path=args.path, name=args.title)
+                run_monitor(args)
         else:
-            monitor(path=args.path, name=args.title)
+            run_monitor(args)

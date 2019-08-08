@@ -1,5 +1,4 @@
 import logging
-import time
 from pathlib import Path
 
 from watchdog.events import FileSystemEventHandler
@@ -28,9 +27,4 @@ def monitor(path: Path, name=None) -> None:
     observer.schedule(event_handler, path.as_posix(), recursive=True)
     observer.start()
     logging.info('Started para monitor')
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        observer.stop()
-    observer.join()
+    return observer
