@@ -25,8 +25,8 @@ clean_parser.add_argument('path', type=lambda p: Path(p), nargs='?', default=os.
 
 run_parser = subparsers.add_parser('run', help='Run as para as service')
 run_parser.add_argument('--title', type=str, default='Para', help='Kdb title')
-run_parser.add_argument('--sync-command', type=str, default=None, help='A command to mount a remote drive')
-run_parser.add_argument('--preview-command', type=str, default=None, help='A command to run markdown server')
+run_parser.add_argument('--on-start', type=str, action='append', help='Commands to run on start')
+run_parser.add_argument('--on-stop', type=str, action='append', help='Commands to run on stop')
 run_parser.add_argument('--daemonize', '-d', action='store_true', help='Run in the background')
 run_parser.add_argument('path', type=lambda p: Path(p), nargs='?', default=os.getcwd(), help='Path of kdb root')
 
@@ -34,17 +34,16 @@ run_parser.add_argument('path', type=lambda p: Path(p), nargs='?', default=os.ge
 def run_monitor(args):
     active = []
     active.append(monitor(path=args.path, name=args.title))
-    if args.sync_command:
-        active.append(run_command(args.sync_command))
-    if args.preview_command:
-        active.append(run_command(args.preview_command))
+    active.extend(run_command(command) for command in args.on_start or [])
 
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
+        logging.info('Interrupt')
         (thread.stop() for thread in active if thread.is_alive())
 
+    active.extend(run_command(command, sync=True) for command in args.on_stop or [])
     (thread.join() for thread in active)
 
 
