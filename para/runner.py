@@ -12,9 +12,7 @@ class CommandThread(Thread):
     def run(self):
         logging.info(f"Running command {self.command}")
         args = shlex.split(self.command)
-        self.process = subprocess.Popen(
-            args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
+        self.process = subprocess.Popen(args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     def stop(self):
         if self.process:
@@ -25,9 +23,7 @@ class CommandThread(Thread):
 def run_sync(command):
     logging.info(f"Running command {command}")
     args = shlex.split(command)
-    process = subprocess.Popen(
-        args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
+    process = subprocess.Popen(args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     process.wait()
     logging.info(f"Finished command {command}")
 

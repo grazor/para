@@ -42,14 +42,10 @@ class Snippet:
         params = dict(zip(params_list, args))
         if not set(self.required_args).issubset(set(params.keys())):
             logging.error(
-                "Missing required params: {}".format(
-                    ", ".join(set(self.required_args).difference(set(params.keys())))
-                )
+                "Missing required params: {}".format(", ".join(set(self.required_args).difference(set(params.keys()))))
             )
             logging.info(
-                "Params sequence: {} [{}]".format(
-                    ", ".join(self.required_args), ", ".join(self.optional_args)
-                )
+                "Params sequence: {} [{}]".format(", ".join(self.required_args), ", ".join(self.optional_args))
             )
             return
         if self.is_category:

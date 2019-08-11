@@ -40,7 +40,7 @@ class Category(RenderMixin, SnippetMixin):
     parent: T = None
 
     def __repr__(self):
-        return f'<Category {self.name}>'
+        return f"<Category {self.name}>"
 
     @property
     def is_empty(self):
@@ -180,17 +180,17 @@ class Category(RenderMixin, SnippetMixin):
             self.description = self.short_description = description
 
     def read_todo(self):
-        with self.todo.open('r') as f:
+        with self.todo.open("r") as f:
             for line in f:
                 if REGEX_CHECKBOX.match(line):
                     self.children.append(
                         Category(
-                            name=REGEX_CHECKBOX.sub('', line).strip(),
+                            name=REGEX_CHECKBOX.sub("", line).strip(),
                             path=self.todo,
-                            description='',
-                            short_description='',
-                            complete='[x]' in line.lower(),
-                            id=f'{self.id}.todo',
+                            description="",
+                            short_description="",
+                            complete="[x]" in line.lower(),
+                            id=f"{self.id}.todo",
                             level=self.level + 1,
                             parent=self,
                         )
@@ -222,7 +222,7 @@ class Category(RenderMixin, SnippetMixin):
             cls.INDEX.setdefault(category.relative_id, category)
 
             for child in category.path.iterdir():
-                if child.name.startswith(".") or child.name in ["index.md", "about.md", 'todo.md']:
+                if child.name.startswith(".") or child.name in ["index.md", "about.md", "todo.md"]:
                     continue
 
                 subcategory = cls(path=child, level=category.level + 1, name=child.name, parent=category)
