@@ -13,10 +13,10 @@ class ParaEventHandler(FileSystemEventHandler):
         self.path, self.name = path, name
 
     def on_any_event(self, event):
-        if event.src_path.endswith('index.md'):
+        if event.src_path.endswith("index.md"):
             return
 
-        logging.info(f'Rebuilding index; reason: {event.event_type} {event.src_path}')
+        logging.info(f"Rebuilding index; reason: {event.event_type} {event.src_path}")
         root = Category.scan(self.path, name=self.name)
         root.render_indexes()
 
@@ -26,5 +26,5 @@ def monitor(path: Path, name=None) -> None:
     event_handler = ParaEventHandler(path, name)
     observer.schedule(event_handler, path.as_posix(), recursive=True)
     observer.start()
-    logging.info('Started para monitor')
+    logging.info("Started para monitor")
     return observer

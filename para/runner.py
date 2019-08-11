@@ -10,22 +10,26 @@ class CommandThread(Thread):
         self.command = command
 
     def run(self):
-        logging.info(f'Running command {self.command}')
+        logging.info(f"Running command {self.command}")
         args = shlex.split(self.command)
-        self.process = subprocess.Popen(args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.process = subprocess.Popen(
+            args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
 
     def stop(self):
         if self.process:
             self.process.stop()
-        logging.info(f'Finished command {self.command}')
+        logging.info(f"Finished command {self.command}")
 
 
 def run_sync(command):
-    logging.info(f'Running command {command}')
+    logging.info(f"Running command {command}")
     args = shlex.split(command)
-    process = subprocess.Popen(args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(
+        args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
     process.wait()
-    logging.info(f'Finished command {command}')
+    logging.info(f"Finished command {command}")
 
 
 def run_command(command, sync=False):

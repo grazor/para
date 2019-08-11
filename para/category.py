@@ -5,12 +5,14 @@ import string
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Optional, TypeVar
+from weakref import WeakValueDictionary
 
-from para.render import render_template
+from para.render import RenderMixin
+from para.snippet import SnippetMixin
 
 T = TypeVar("Category")
 
-DEFAULT_ROOT_NAME = 'Para'
+DEFAULT_ROOT_NAME = "Para"
 
 DATE_FORMAT = "%d.%m.%Y"
 SPECIAL_CHARS = set(string.punctuation + string.digits + string.whitespace)
@@ -22,10 +24,13 @@ REGEX_CHECKBOX = re.compile(r"\[[xX_\s]?\]")
 
 
 @dataclass
-class Category:
+class Category(RenderMixin, SnippetMixin):
+    INDEX = WeakValueDictionary()
+
     path: Path = None
     level: int = 0
     name: str = ""
+    id: str = ""
     short_description: str = ""
     description: str = ""
     created_at: dt.date = None
@@ -60,27 +65,39 @@ class Category:
 
     @property
     def subcategories(self):
-        return sorted(filter(lambda x: x.is_category, self.children), key=Category.sort_key)
+        return sorted(
+            filter(lambda x: x.is_category, self.children), key=Category.sort_key
+        )
 
     @property
     def entries(self):
-        return sorted(filter(lambda x: x.is_entry, self.children), key=Category.sort_key)
+        return sorted(
+            filter(lambda x: x.is_entry, self.children), key=Category.sort_key
+        )
 
     @property
     def referencable(self):
-        return sorted(filter(lambda x: x.is_referencable, self.children), key=Category.sort_key)
+        return sorted(
+            filter(lambda x: x.is_referencable, self.children), key=Category.sort_key
+        )
 
     @property
     def nonactionable(self):
-        return sorted(filter(lambda x: x.complete is None, self.entries), key=Category.sort_key)
+        return sorted(
+            filter(lambda x: x.complete is None, self.entries), key=Category.sort_key
+        )
 
     @property
     def completed(self):
-        return sorted(filter(lambda x: x.complete is True, self.entries), key=Category.sort_key)
+        return sorted(
+            filter(lambda x: x.complete is True, self.entries), key=Category.sort_key
+        )
 
     @property
     def incompleted(self):
-        return sorted(filter(lambda x: x.complete is False, self.entries), key=Category.sort_key)
+        return sorted(
+            filter(lambda x: x.complete is False, self.entries), key=Category.sort_key
+        )
 
     @property
     def relative_path(self):
@@ -104,42 +121,79 @@ class Category:
             return (complete[entry.complete], entry.path.name)
         return entry.path.name
 
+    @property
+    def relative_id(self):
+        if not self.parent:
+            return self.id
+        return f"{self.parent.id}.{self.id}"
+
     def read_about(self):
         with self.about.open("r") as f:
             lines = f.readlines()
             name = next(filter(lambda l: l.startswith("#"), lines), None)
             created_at = next(filter(lambda l: l.startswith("Created:"), lines), None)
             due_to = next(filter(lambda l: l.startswith("Due:"), lines), None)
+            category_id = next(filter(lambda l: l.startswith("Id:"), lines), None)
             description_lines = list(
-                (filter(lambda l: not any([l.startswith("#"), l.startswith("Created:"), l.startswith("Due:")]), lines))
+                (
+                    filter(
+                        lambda l: not any(
+                            [
+                                l.startswith("#"),
+                                l.startswith("Created:"),
+                                l.startswith("Due:"),
+                                l.startswith("Id:"),
+                            ]
+                        ),
+                        lines,
+                    )
+                )
             )
-            short_description = next(filter(lambda l: len(l.strip()) > 0, description_lines), "").strip()
+            short_description = next(
+                filter(lambda l: len(l.strip()) > 0, description_lines), ""
+            ).strip()
             description = "".join(description_lines).strip()
 
         self.name = name and name.split("#")[1].strip() or self.name
         self.short_description = short_description
         self.description = description
+        self.id = category_id and category_id.split("Id:")[1].strip() or self.path.name
         if created_at:
             try:
                 datestr = created_at.split("Created:")[1].strip()
-                self.created_at = self.created_at or created_at and dt.datetime.strptime(datestr, DATE_FORMAT).date()
+                self.created_at = (
+                    self.created_at
+                    or created_at
+                    and dt.datetime.strptime(datestr, DATE_FORMAT).date()
+                )
             except ValueError:
-                logging.error(f"Failed to parse created_at date {datestr} from {about.as_posix()}")
+                logging.error(
+                    f"Failed to parse created_at date {datestr} from {about.as_posix()}"
+                )
 
         if due_to:
             try:
                 datestr = due_to.split("Due:")[1].strip()
-                self.due_to = self.due_to or due_to and dt.datetime.strptime(datestr, DATE_FORMAT).date()
+                self.due_to = (
+                    self.due_to
+                    or due_to
+                    and dt.datetime.strptime(datestr, DATE_FORMAT).date()
+                )
             except ValueError:
-                logging.error(f"Failed to parse due_to date {datestr} from {about.as_posix()}")
+                logging.error(
+                    f"Failed to parse due_to date {datestr} from {about.as_posix()}"
+                )
 
     def read_entry(self):
         name = description = None
+        self.id = self.path.name
         with self.path.open("r") as f:
             for line in f:
                 if not name and line.startswith("#"):
                     name = line[1:].strip()
-                elif not description and line[0] not in DESCRIPTION_FORBIDDEN_FIRST_CHARS:
+                elif (
+                    not description and line[0] not in DESCRIPTION_FORBIDDEN_FIRST_CHARS
+                ):
                     description = line.strip()
                 if name and description:
                     break
@@ -158,39 +212,41 @@ class Category:
         elif self.is_entry:
             self.read_entry()
 
-    def render_indexes(self):
-        subcategories = [self]
-        while subcategories:
-            category = subcategories.pop(0)
-            subcategories.extend(category.subcategories)
-            template_name = "category.md" if category.level < 2 else "subcategory.md"
-            render_template(template_name, category.index, root=category)
-
-    def remove_indexes(self):
-        subcategories = [self]
-        while subcategories:
-            category = subcategories.pop(0)
-            subcategories.extend(category.subcategories)
-            if category.index.exists() and not category.index.is_dir():
-                category.index.unlink()
+    def create_subcategory(self, name):
+        path = self.path.joinpath(name)
+        path.mkdir()
+        return Category(path=path, level=self.level + 1, name=name)
 
     @classmethod
     def scan(cls, path, name: Optional[str] = None) -> None:
-        root = cls(path=path, level=0, name=name or DEFAULT_ROOT_NAME)
+        root = cls(path=path, level=0, name=name or DEFAULT_ROOT_NAME, id="root")
         root.read()
         categories = [root]
 
         while categories:
             category = categories.pop(0)
+            cls.INDEX.setdefault(category.id, category)
+            cls.INDEX.setdefault(category.relative_id, category)
 
             for child in category.path.iterdir():
                 if child.name.startswith(".") or child.name in ["index.md", "about.md"]:
                     continue
 
-                subcategory = cls(path=child, level=category.level + 1, name=child.name, parent=category)
+                subcategory = cls(
+                    path=child,
+                    level=category.level + 1,
+                    name=child.name,
+                    parent=category,
+                )
                 subcategory.read()
                 category.children.append(subcategory)
                 if subcategory.is_category:
                     categories.append(subcategory)
+                else:
+                    cls.INDEX.setdefault(category.relative_id, category)
 
         return root
+
+    @property
+    def ids(self):
+        return list(self.INDEX.keys())
