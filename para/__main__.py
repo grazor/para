@@ -11,14 +11,7 @@ from para import Category, monitor, run_command
 logging.basicConfig(level=logging.INFO)
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-p",
-    "--path",
-    type=lambda p: Path(p),
-    nargs="?",
-    default=os.getcwd(),
-    help="Path of kdb root",
-)
+parser.add_argument("-p", "--path", type=lambda p: Path(p), nargs="?", default=os.getcwd(), help="Path of kdb root")
 parser.add_argument("--title", type=str, default="Para", help="Kdb title")
 
 subparsers = parser.add_subparsers(dest="command", required=True)
@@ -29,15 +22,9 @@ list_parser = subparsers.add_parser("ls", help="Remove index files")
 
 run_parser = subparsers.add_parser("run", help="Run as para as service")
 run_parser.add_argument("--title", type=str, default="Para", help="Kdb title")
-run_parser.add_argument(
-    "--on-start", type=str, action="append", help="Commands to run on start"
-)
-run_parser.add_argument(
-    "--on-stop", type=str, action="append", help="Commands to run on stop"
-)
-run_parser.add_argument(
-    "-d", "--daemonize", action="store_true", help="Run in the background"
-)
+run_parser.add_argument("--on-start", type=str, action="append", help="Commands to run on start")
+run_parser.add_argument("--on-stop", type=str, action="append", help="Commands to run on stop")
+run_parser.add_argument("-d", "--daemonize", action="store_true", help="Run in the background")
 
 create_parser = subparsers.add_parser("create", help="Create entry from template")
 create_parser.add_argument("type", help="Snippet type")
@@ -64,7 +51,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     root = Category.scan(path=args.path, name=args.title)
 
-    if args.command == "run":
+    if args.command == "index":
         root.render_indexes()
 
     if args.command == "clean":

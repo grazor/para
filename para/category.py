@@ -20,7 +20,7 @@ DESCRIPTION_FORBIDDEN_FIRST_CHARS = SPECIAL_CHARS - set("[]()")
 
 ALLOWED_EXTENSIONS = [".html", ".pdf", ".csv", ".txt"]
 
-REGEX_CHECKBOX = re.compile(r"\[[xX_\s]?\]")
+REGEX_CHECKBOX = re.compile(r"[-\s]*\[[xX_\s]?\]")
 
 
 @dataclass
@@ -39,6 +39,9 @@ class Category(RenderMixin, SnippetMixin):
     children: Iterable = field(default_factory=list)
     parent: T = None
 
+    def __repr__(self):
+        return f'<Category {self.name}>'
+
     @property
     def is_empty(self):
         return not self.about.exists()
@@ -50,6 +53,10 @@ class Category(RenderMixin, SnippetMixin):
     @property
     def about(self):
         return self.path.joinpath("about.md")
+
+    @property
+    def todo(self):
+        return self.path.joinpath("todo.md")
 
     @property
     def is_category(self):
@@ -65,39 +72,27 @@ class Category(RenderMixin, SnippetMixin):
 
     @property
     def subcategories(self):
-        return sorted(
-            filter(lambda x: x.is_category, self.children), key=Category.sort_key
-        )
+        return sorted(filter(lambda x: x.is_category, self.children), key=Category.sort_key)
 
     @property
     def entries(self):
-        return sorted(
-            filter(lambda x: x.is_entry, self.children), key=Category.sort_key
-        )
+        return sorted(filter(lambda x: x.is_entry, self.children), key=Category.sort_key)
 
     @property
     def referencable(self):
-        return sorted(
-            filter(lambda x: x.is_referencable, self.children), key=Category.sort_key
-        )
+        return sorted(filter(lambda x: x.is_referencable, self.children), key=Category.sort_key)
 
     @property
     def nonactionable(self):
-        return sorted(
-            filter(lambda x: x.complete is None, self.entries), key=Category.sort_key
-        )
+        return sorted(filter(lambda x: x.complete is None, self.entries), key=Category.sort_key)
 
     @property
     def completed(self):
-        return sorted(
-            filter(lambda x: x.complete is True, self.entries), key=Category.sort_key
-        )
+        return sorted(filter(lambda x: x.complete is True, self.entries), key=Category.sort_key)
 
     @property
     def incompleted(self):
-        return sorted(
-            filter(lambda x: x.complete is False, self.entries), key=Category.sort_key
-        )
+        return sorted(filter(lambda x: x.complete is False, self.entries), key=Category.sort_key)
 
     @property
     def relative_path(self):
@@ -138,20 +133,13 @@ class Category(RenderMixin, SnippetMixin):
                 (
                     filter(
                         lambda l: not any(
-                            [
-                                l.startswith("#"),
-                                l.startswith("Created:"),
-                                l.startswith("Due:"),
-                                l.startswith("Id:"),
-                            ]
+                            [l.startswith("#"), l.startswith("Created:"), l.startswith("Due:"), l.startswith("Id:")]
                         ),
                         lines,
                     )
                 )
             )
-            short_description = next(
-                filter(lambda l: len(l.strip()) > 0, description_lines), ""
-            ).strip()
+            short_description = next(filter(lambda l: len(l.strip()) > 0, description_lines), "").strip()
             description = "".join(description_lines).strip()
 
         self.name = name and name.split("#")[1].strip() or self.name
@@ -161,28 +149,16 @@ class Category(RenderMixin, SnippetMixin):
         if created_at:
             try:
                 datestr = created_at.split("Created:")[1].strip()
-                self.created_at = (
-                    self.created_at
-                    or created_at
-                    and dt.datetime.strptime(datestr, DATE_FORMAT).date()
-                )
+                self.created_at = self.created_at or created_at and dt.datetime.strptime(datestr, DATE_FORMAT).date()
             except ValueError:
-                logging.error(
-                    f"Failed to parse created_at date {datestr} from {about.as_posix()}"
-                )
+                logging.error(f"Failed to parse created_at date {datestr} from {about.as_posix()}")
 
         if due_to:
             try:
                 datestr = due_to.split("Due:")[1].strip()
-                self.due_to = (
-                    self.due_to
-                    or due_to
-                    and dt.datetime.strptime(datestr, DATE_FORMAT).date()
-                )
+                self.due_to = self.due_to or due_to and dt.datetime.strptime(datestr, DATE_FORMAT).date()
             except ValueError:
-                logging.error(
-                    f"Failed to parse due_to date {datestr} from {about.as_posix()}"
-                )
+                logging.error(f"Failed to parse due_to date {datestr} from {about.as_posix()}")
 
     def read_entry(self):
         name = description = None
@@ -191,9 +167,7 @@ class Category(RenderMixin, SnippetMixin):
             for line in f:
                 if not name and line.startswith("#"):
                     name = line[1:].strip()
-                elif (
-                    not description and line[0] not in DESCRIPTION_FORBIDDEN_FIRST_CHARS
-                ):
+                elif not description and line[0] not in DESCRIPTION_FORBIDDEN_FIRST_CHARS:
                     description = line.strip()
                 if name and description:
                     break
@@ -205,10 +179,29 @@ class Category(RenderMixin, SnippetMixin):
         if description:
             self.description = self.short_description = description
 
+    def read_todo(self):
+        with self.todo.open('r') as f:
+            for line in f:
+                if REGEX_CHECKBOX.match(line):
+                    self.children.append(
+                        Category(
+                            name=REGEX_CHECKBOX.sub('', line).strip(),
+                            path=self.todo,
+                            description='',
+                            short_description='',
+                            complete='[x]' in line.lower(),
+                            id=f'{self.id}.todo',
+                            level=self.level + 1,
+                            parent=self,
+                        )
+                    )
+
     def read(self):
         if self.is_category:
             if self.about.exists():
                 self.read_about()
+            if self.todo.exists():
+                self.read_todo()
         elif self.is_entry:
             self.read_entry()
 
@@ -229,15 +222,10 @@ class Category(RenderMixin, SnippetMixin):
             cls.INDEX.setdefault(category.relative_id, category)
 
             for child in category.path.iterdir():
-                if child.name.startswith(".") or child.name in ["index.md", "about.md"]:
+                if child.name.startswith(".") or child.name in ["index.md", "about.md", 'todo.md']:
                     continue
 
-                subcategory = cls(
-                    path=child,
-                    level=category.level + 1,
-                    name=child.name,
-                    parent=category,
-                )
+                subcategory = cls(path=child, level=category.level + 1, name=child.name, parent=category)
                 subcategory.read()
                 category.children.append(subcategory)
                 if subcategory.is_category:
