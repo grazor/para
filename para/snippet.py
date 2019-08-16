@@ -39,7 +39,7 @@ class Snippet:
     def create(self, root, args):
         dest_node = root.INDEX[self.destination_id or args.pop(0)]
         params_list = self.required_args + self.optional_args
-        params = dict(zip(params_list, args))
+        params = dict(map(lambda x: x.split('='), args))
         if not set(self.required_args).issubset(set(params.keys())):
             logging.error(
                 "Missing required params: {}".format(", ".join(set(self.required_args).difference(set(params.keys()))))
