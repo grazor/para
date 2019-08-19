@@ -6,7 +6,7 @@ from pathlib import Path
 
 import daemon
 
-from para import Category, monitor, run_command
+from para import Category, monitor, random_note_loop, run_command
 
 logging.basicConfig(level=logging.INFO)
 
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         print(", ".join(root.ids))
 
     if args.command == 'random':
-        root.random_loop(exclude={'archive'})
+        random_note_loop(root, exclude={'archive'})
 
     if args.command == "create":
         root.create_from_snippet(args.type, args.params)

@@ -16,13 +16,14 @@ class RandomNoteMixin:
 
         return random.choice(entries)
 
-    def random_loop(self, exclude=None):
-        editor = os.environ.get('EDITOR', 'vim')
-        try:
-            while True:
-                note = self.get_random_note(exclude)
-                response = input(f'Open {note.parent.name}: {note.name} (Y/n): ')
-                if response.lower() not in ['n', 'no']:
-                    call([editor, note.path.as_posix()])
-        except KeyboardInterrupt:
-            pass
+
+def random_note_loop(node, exclude=None):
+    editor = os.environ.get('EDITOR', 'vim')
+    try:
+        while True:
+            note = node.get_random_note(exclude)
+            response = input(f'Open {note.parent.name}: {note.name} (Y/n): ')
+            if response.lower() not in ['n', 'no']:
+                call([editor, note.path.as_posix()])
+    except KeyboardInterrupt:
+        pass
