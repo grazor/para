@@ -7,8 +7,7 @@ from pathlib import Path
 from typing import Iterable, Optional, TypeVar
 from weakref import WeakValueDictionary
 
-from para.render import RenderMixin
-from para.snippet import SnippetMixin
+from para.mixins import RandomNoteMixin, RenderMixin, SnippetMixin
 
 T = TypeVar("Category")
 
@@ -24,7 +23,7 @@ REGEX_CHECKBOX = re.compile(r"[-\s]*\[[xX_\s]?\]")
 
 
 @dataclass
-class Category(RenderMixin, SnippetMixin):
+class Category(RandomNoteMixin, RenderMixin, SnippetMixin):
     INDEX = WeakValueDictionary()
 
     path: Path = None
@@ -151,14 +150,14 @@ class Category(RenderMixin, SnippetMixin):
                 datestr = created_at.split("Created:")[1].strip()
                 self.created_at = self.created_at or created_at and dt.datetime.strptime(datestr, DATE_FORMAT).date()
             except ValueError:
-                logging.error(f"Failed to parse created_at date {datestr} from {about.as_posix()}")
+                logging.error(f"Failed to parse created_at date {datestr} from {self.about.as_posix()}")
 
         if due_to:
             try:
                 datestr = due_to.split("Due:")[1].strip()
                 self.due_to = self.due_to or due_to and dt.datetime.strptime(datestr, DATE_FORMAT).date()
             except ValueError:
-                logging.error(f"Failed to parse due_to date {datestr} from {about.as_posix()}")
+                logging.error(f"Failed to parse due_to date {datestr} from {self.about.as_posix()}")
 
     def read_entry(self):
         name = description = None

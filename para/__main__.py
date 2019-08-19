@@ -26,6 +26,8 @@ run_parser.add_argument("--on-start", type=str, action="append", help="Commands 
 run_parser.add_argument("--on-stop", type=str, action="append", help="Commands to run on stop")
 run_parser.add_argument("-d", "--daemonize", action="store_true", help="Run in the background")
 
+random_note_parser = subparsers.add_parser("random", help="Show random note")
+
 create_parser = subparsers.add_parser("create", help="Create entry from template")
 create_parser.add_argument("type", help="Snippet type")
 create_parser.add_argument("params", nargs="*", help="Snippet params")
@@ -67,6 +69,9 @@ if __name__ == "__main__":
     if args.command == "ls":
         print("Entries:")
         print(", ".join(root.ids))
+
+    if args.command == 'random':
+        root.random_loop(exclude={'archive'})
 
     if args.command == "create":
         root.create_from_snippet(args.type, args.params)
