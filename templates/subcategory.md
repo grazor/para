@@ -11,9 +11,9 @@
 
 {% endif -%}
 
-{% for entry in root.incompleted -%}{{ render_entry(entry) }}
-{% endfor %}
 {% for entry in root.nonactionable -%}{{ render_entry(entry) }}
+{% endfor %}
+{% for entry in root.incompleted -%}{{ render_entry(entry) }}
 {% endfor %}
 {% if root.completed -%}
 - - -
