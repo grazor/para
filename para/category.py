@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Iterable, Optional, TypeVar
 from weakref import WeakValueDictionary
 
+import yaml
+
 from para.mixins import RandomNoteMixin, RenderMixin, SnippetMixin
 
 T = TypeVar("Category")
@@ -34,6 +36,7 @@ class Category(RandomNoteMixin, RenderMixin, SnippetMixin):
     description: str = ""
     created_at: dt.date = None
     due_to: dt.date = None
+    environments: set = field(default_factory=lambda: {'all'})
     complete: bool = None
     children: Iterable = field(default_factory=list)
     parent: T = None
@@ -51,7 +54,11 @@ class Category(RandomNoteMixin, RenderMixin, SnippetMixin):
 
     @property
     def about(self):
-        return self.path.joinpath("about.md")
+        return (
+            self.path.joinpath("about.yml")
+            if self.path.joinpath("about.yaml").exists()
+            else self.path.joinpath("about.yml")
+        )
 
     @property
     def todo(self):
@@ -122,42 +129,32 @@ class Category(RandomNoteMixin, RenderMixin, SnippetMixin):
         return f"{self.parent.id}.{self.id}"
 
     def read_about(self):
-        with self.about.open("r") as f:
-            lines = f.readlines()
-            name = next(filter(lambda l: l.startswith("#"), lines), None)
-            created_at = next(filter(lambda l: l.startswith("Created:"), lines), None)
-            due_to = next(filter(lambda l: l.startswith("Due:"), lines), None)
-            category_id = next(filter(lambda l: l.startswith("Id:"), lines), None)
-            description_lines = list(
-                (
-                    filter(
-                        lambda l: not any(
-                            [l.startswith("#"), l.startswith("Created:"), l.startswith("Due:"), l.startswith("Id:")]
-                        ),
-                        lines,
-                    )
-                )
-            )
-            short_description = next(filter(lambda l: len(l.strip()) > 0, description_lines), "").strip()
-            description = "".join(description_lines).strip()
 
-        self.name = name and name.split("#")[1].strip() or self.name
-        self.short_description = short_description
-        self.description = description
-        self.id = category_id and category_id.split("Id:")[1].strip() or self.path.name
+        with self.about.open('r') as f:
+            about = yaml.load(f, Loader=yaml.BaseLoader)
+
+        self.name = about.get('name') or self.name
+        self.short_description = about.get('short')
+        self.description = about.get('description')
+        self.id = about.get('id') or self.path.name
+
+        environments = about.get('environments')
+        if isinstance(environments, list):
+            self.environments = set(environments)
+
+        created_at = about.get('created_at')
         if created_at:
             try:
-                datestr = created_at.split("Created:")[1].strip()
-                self.created_at = self.created_at or created_at and dt.datetime.strptime(datestr, DATE_FORMAT).date()
+                self.created_at = dt.datetime.strptime(created_at, DATE_FORMAT).date()
             except ValueError:
-                logging.error(f"Failed to parse created_at date {datestr} from {self.about.as_posix()}")
+                logging.error(f"Failed to parse created_at date {created_at} from {self.about.as_posix()}")
 
+        due_to = about.get('due_to')
         if due_to:
             try:
-                datestr = due_to.split("Due:")[1].strip()
-                self.due_to = self.due_to or due_to and dt.datetime.strptime(datestr, DATE_FORMAT).date()
+                self.due_to = dt.datetime.strptime(due_to, DATE_FORMAT).date()
             except ValueError:
-                logging.error(f"Failed to parse due_to date {datestr} from {self.about.as_posix()}")
+                logging.error(f"Failed to parse due_to date {due_to} from {self.about.as_posix()}")
 
     def read_entry(self):
         name = description = None
@@ -210,7 +207,7 @@ class Category(RandomNoteMixin, RenderMixin, SnippetMixin):
         return Category(path=path, level=self.level + 1, name=name)
 
     @classmethod
-    def scan(cls, path, name: Optional[str] = None) -> None:
+    def scan(cls, path, name: Optional[str] = None, environment: str = 'all') -> None:
         root = cls(path=path, level=0, name=name or DEFAULT_ROOT_NAME, id="root")
         root.read()
         categories = [root]
@@ -221,11 +218,15 @@ class Category(RandomNoteMixin, RenderMixin, SnippetMixin):
             cls.INDEX.setdefault(category.relative_id, category)
 
             for child in category.path.iterdir():
-                if child.name.startswith(".") or child.name in ["index.md", "about.md", "todo.md"]:
+                if child.name.startswith(".") or child.name in ["index.md", "about.yaml", "about.yml", "todo.md"]:
                     continue
 
                 subcategory = cls(path=child, level=category.level + 1, name=child.name, parent=category)
                 subcategory.read()
+
+                if environment != 'all' and environment not in subcategory.environments:
+                    continue
+
                 category.children.append(subcategory)
                 if subcategory.is_category:
                     categories.append(subcategory)

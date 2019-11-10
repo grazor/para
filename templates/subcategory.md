@@ -6,6 +6,10 @@
 
 # {{ root.name }}
 
+{% if root.short_description -%}
+{{ root.short_description }}
+
+{% endif -%}
 {% if root.description -%}
 {{ root.description }}
 
@@ -27,6 +31,10 @@
 {% if not category.is_empty -%}
 ## [{{ category.name }}]({{ category.path.name }}/index.md)
 
+{% if category.short_description -%}
+{{ category.short_description }}
+
+{% endif -%}
 {% if category.description -%}
 {{ category.description }}
 

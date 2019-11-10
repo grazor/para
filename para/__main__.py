@@ -13,6 +13,7 @@ logging.basicConfig(level=logging.INFO)
 parser = argparse.ArgumentParser()
 parser.add_argument("-p", "--path", type=lambda p: Path(p), nargs="?", default=os.getcwd(), help="Path of kdb root")
 parser.add_argument("--title", type=str, default="Para", help="Kdb title")
+parser.add_argument("-e", "--environment", type=str, default="all", help="Environment name")
 
 subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -51,7 +52,7 @@ def run_monitor(args):
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    root = Category.scan(path=args.path, name=args.title)
+    root = Category.scan(path=args.path, name=args.title, environment=args.environment)
 
     if args.command == "index":
         root.render_indexes()
