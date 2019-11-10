@@ -6,7 +6,7 @@ from pathlib import Path
 
 import daemon
 
-from para import Category, monitor, run_command
+from para import Category, monitor, random_note_loop, run_command
 
 logging.basicConfig(level=logging.INFO)
 
@@ -25,6 +25,8 @@ run_parser.add_argument("--title", type=str, default="Para", help="Kdb title")
 run_parser.add_argument("--on-start", type=str, action="append", help="Commands to run on start")
 run_parser.add_argument("--on-stop", type=str, action="append", help="Commands to run on stop")
 run_parser.add_argument("-d", "--daemonize", action="store_true", help="Run in the background")
+
+random_note_parser = subparsers.add_parser("random", help="Show random note")
 
 create_parser = subparsers.add_parser("create", help="Create entry from template")
 create_parser.add_argument("type", help="Snippet type")
@@ -67,6 +69,9 @@ if __name__ == "__main__":
     if args.command == "ls":
         print("Entries:")
         print(", ".join(root.ids))
+
+    if args.command == 'random':
+        random_note_loop(root, exclude={'archive'})
 
     if args.command == "create":
         root.create_from_snippet(args.type, args.params)

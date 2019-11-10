@@ -10,7 +10,6 @@
 {{ root.description }}
 
 {% endif -%}
-
 {% for category in root.subcategories -%}
 {% if not category.is_empty -%}
 ## [{{ category.name }}]({{ category.relative_path.name }}/index.md)
@@ -19,10 +18,8 @@
 {{ category.description }}
 
 {% endif -%}
-
 {% for child in category.subcategories -%}{{ render_category(child, root) }}
 {% endfor %}
-
 {% for entry in category.entries %}{{ render_entry(entry, category.parent) }}
 {% endfor %}
 {% endif -%}{% endfor %}
