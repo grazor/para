@@ -4,7 +4,7 @@ import re
 import string
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Optional, TypeVar
+from typing import Iterable, Mapping, Optional, TypeVar
 from weakref import WeakValueDictionary
 
 import yaml
@@ -39,6 +39,7 @@ class Category(RandomNoteMixin, RenderMixin, SnippetMixin):
     environments: set = field(default_factory=lambda: {'all'})
     complete: bool = None
     children: Iterable = field(default_factory=list)
+    files_metadata: Mapping = field(default_factory=dict)
     parent: T = None
 
     def __repr__(self):
@@ -75,6 +76,10 @@ class Category(RandomNoteMixin, RenderMixin, SnippetMixin):
     @property
     def is_referencable(self):
         return not self.path.is_dir() and self.path.suffix in ALLOWED_EXTENSIONS
+
+    @property
+    def file_description(self):
+        return self.parent.files_metadata.get(self.path.name) or ''
 
     @property
     def subcategories(self):
@@ -137,6 +142,7 @@ class Category(RandomNoteMixin, RenderMixin, SnippetMixin):
         self.short_description = about.get('short')
         self.description = about.get('description')
         self.id = about.get('id') or self.path.name
+        self.files_metadata.update(about.get('files') or {})
 
         environments = about.get('environments')
         if isinstance(environments, list):
